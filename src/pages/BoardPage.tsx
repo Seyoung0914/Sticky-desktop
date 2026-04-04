@@ -453,44 +453,53 @@ export function BoardPage() {
         setShowDeleteModal(false);
     };
 
-    // 스티커 메모를 별도 Tauri 창으로 열기
     const openStickyWindow = async (noteId: string) => {
-        const label = `sticky-${noteId.slice(0, 8)}`;
-        // 이미 열린 창이 있는지 확인
-        const existing = await WebviewWindow.getByLabel(label);
-        if (existing) {
-            await existing.setFocus();
-            return;
+        try {
+            const label = `sticky-${noteId.slice(0, 8)}`;
+            // 이미 열린 창이 있는지 확인
+            const existing = await WebviewWindow.getByLabel(label);
+            if (existing) {
+                await existing.setFocus();
+                return;
+            }
+            const webview = new WebviewWindow(label, {
+                url: `/?noteId=${noteId}`,
+                title: 'SyncStick Memo',
+                width: 320,
+                height: 420,
+                x: 20,
+                y: 20,
+                decorations: false,
+                alwaysOnTop: true,
+                resizable: true,
+                transparent: false,
+            });
+
+            webview.once('tauri://error', (e) => {
+                console.error('Tauri Window Error:', e);
+                alert(`Window Error: ${JSON.stringify(e)}`);
+            });
+        } catch (error) {
+            console.error('Failed to open window:', error);
+            alert(`창 열기 실패: ${error}`);
         }
-        // dev/prod 모두 호환되는 URL
-        const baseUrl = window.location.origin;
-        new WebviewWindow(label, {
-            url: `${baseUrl}/?noteId=${noteId}`,
-            title: 'SyncStick Memo',
-            width: 320,
-            height: 420,
-            x: 20,
-            y: 20,
-            decorations: false,
-            alwaysOnTop: true,
-            resizable: true,
-            transparent: false,
-        });
     };
 
     const getPreview = (content: string) => {
         if (!content.trim()) return 'New Note';
-        // innerText가 블록 요소 사이에 줄바꿈을 넣으려면 DOM에 실제로 붙여야 함
-        const tmp = document.createElement('div');
-        tmp.style.position = 'absolute';
-        tmp.style.left = '-9999px';
-        tmp.style.whiteSpace = 'pre-wrap';
-        tmp.innerHTML = content;
-        document.body.appendChild(tmp);
-        const text = tmp.innerText || '';
-        document.body.removeChild(tmp);
         
+        // 블록 태그와 br 태그를 줄바꿈(\n)으로 변환
+        let htmlStr = content;
+        htmlStr = htmlStr.replace(/<br\s*\/?>/gi, '\n');
+        htmlStr = htmlStr.replace(/<\/?(div|p|h[1-6]|ul|ol|li|blockquote|table|tr)[^>]*>/gi, '\n');
+        
+        const tmp = document.createElement('div');
+        tmp.innerHTML = htmlStr;
+        const text = tmp.innerText || tmp.textContent || '';
+        
+        // 첫 줄 추출
         const firstLine = text.split('\n').find((l) => l.trim().length > 0)?.trim();
+        
         if (!firstLine) return 'New Note';
         return firstLine.length > 30 ? firstLine.slice(0, 30) + '…' : firstLine;
     };
@@ -611,6 +620,7 @@ export function BoardPage() {
                                 ref={editorRef}
                                 className="content-editable"
                                 contentEditable
+                                spellCheck={false}
                                 suppressContentEditableWarning
                                 onInput={handleEditorInput}
                                 onKeyDown={handleEditorKeyDown}

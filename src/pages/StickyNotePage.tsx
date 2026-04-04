@@ -118,6 +118,7 @@ export function StickyNotePage() {
                 ref={editorRef}
                 className="sticky-page-editor"
                 contentEditable
+                spellCheck={false}
                 suppressContentEditableWarning
                 onInput={handleInput}
                 onFocus={() => setIsFocused(true)}
