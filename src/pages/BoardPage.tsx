@@ -8,6 +8,20 @@ import { useUpdateNote, useDeleteNote } from '../hooks/useNotes';
 import { DeleteModal } from '../components/DeleteModal';
 import { ColorPicker } from '../components/ColorPicker';
 import { TextFormatToolbar } from '../components/TextFormatToolbar';
+import { StickyNote } from '../components/StickyNote';
+
+function getFirstTextNode(node: Node): Text | null {
+    if (node.nodeType === Node.TEXT_NODE) return node as Text;
+    for (let i = 0; i < node.childNodes.length; i++) {
+        const found = getFirstTextNode(node.childNodes[i]);
+        if (found) return found;
+    }
+    return null;
+}
+
+function getFullLineText(node: Node): string {
+    return node.textContent || '';
+}
 
 function renumberTextLists(root: HTMLElement) {
     let currentNumber = 0;
@@ -27,49 +41,43 @@ function renumberTextLists(root: HTMLElement) {
     for (let i = 0; i < children.length; i++) {
         const node = children[i];
         
-        let textNodeToUpdate: Node | null = null;
-        let lineText = '';
+        // Get the full text of this line/block
+        const lineText = getFullLineText(node);
+        // Get the first text node where the number prefix lives
+        const firstTextNode = getFirstTextNode(node);
 
-        if (node.nodeType === Node.TEXT_NODE) {
-            textNodeToUpdate = node;
-            lineText = node.textContent || '';
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as HTMLElement;
-            const firstChild = el.firstChild;
-            if (firstChild && firstChild.nodeType === Node.TEXT_NODE) {
-                textNodeToUpdate = firstChild;
-                lineText = firstChild.textContent || '';
-            } else {
-                const text = el.textContent || '';
-                if (!text.trim()) inList = false;
-            }
+        if (!firstTextNode || !lineText.trim()) {
+            if (!lineText.trim()) inList = false;
+            continue;
         }
 
-        if (textNodeToUpdate) {
-            const match = lineText.match(/^(\d+)\.\s/);
-            if (match) {
-                if (!inList) {
-                    inList = true;
-                    currentNumber = parseInt(match[1], 10);
-                } else {
-                    currentNumber++;
-                    const expectedStr = `${currentNumber}. `;
-                    const actualStr = `${match[1]}. `;
-                    
-                    if (expectedStr !== actualStr) {
-                        const newText = lineText.replace(/^(\d+)\.\s/, expectedStr);
-                        textNodeToUpdate.textContent = newText;
+        const match = lineText.match(/^(\d+)\.\s/);
+        if (match) {
+            if (!inList) {
+                inList = true;
+                currentNumber = parseInt(match[1], 10);
+            } else {
+                currentNumber++;
+                const expectedStr = `${currentNumber}. `;
+                const actualStr = `${match[1]}. `;
+                
+                if (expectedStr !== actualStr) {
+                    // Replace the number in the first text node
+                    const textContent = firstTextNode.textContent || '';
+                    const textMatch = textContent.match(/^(\d+)\.\s/);
+                    if (textMatch) {
+                        firstTextNode.textContent = textContent.replace(/^(\d+)\.\s/, expectedStr);
                         changed = true;
 
-                        if (textNodeToUpdate === caretNode) {
+                        if (firstTextNode === caretNode) {
                             const diff = expectedStr.length - actualStr.length;
                             caretOffset = Math.max(0, caretOffset + diff);
                         }
                     }
                 }
-            } else if (lineText.trim().length > 0) {
-                inList = false;
             }
+        } else if (lineText.trim().length > 0) {
+            inList = false;
         }
     }
 
@@ -102,11 +110,13 @@ export function BoardPage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [sortMode, setSortMode] = useState<'newest' | 'oldest'>('newest');
     const [showSortMenu, setShowSortMenu] = useState(false);
+    const [stickyNoteId, setStickyNoteId] = useState<string | null>(null);
 
     const sortMenuRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const isInternalUpdate = useRef(false);
+    const editingNoteIdRef = useRef<string | null>(null);
 
     // Sort notes
     const sortedNotes = [...notes].sort((a, b) => {
@@ -131,7 +141,7 @@ export function BoardPage() {
 
     // Sync external content updates
     useEffect(() => {
-        if (selectedNote && editorRef.current && !isInternalUpdate.current) {
+        if (selectedNote && editorRef.current && !isInternalUpdate.current && editingNoteIdRef.current !== selectedNote.id) {
             const currentContent = editorRef.current.innerHTML;
             if (selectedNote.content !== currentContent) {
                 // Save and restore cursor position
@@ -214,14 +224,28 @@ export function BoardPage() {
         
         const value = editorRef.current.innerHTML;
 
+        editingNoteIdRef.current = selectedNoteId;
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             updateNote.mutate({ id: selectedNoteId, updates: { content: value } });
+            // Keep guard for a bit to absorb the echo from realtime sync
+            setTimeout(() => { editingNoteIdRef.current = null; }, 2000);
         }, 500);
     };
 
-    // Auto-numbering on Enter
+    // Auto-numbering on Enter + list continuation, and renumber on Backspace/Delete
     const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        // Re-number after Backspace/Delete merges lines
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+            setTimeout(() => {
+                if (editorRef.current) {
+                    renumberTextLists(editorRef.current);
+                    handleEditorInput();
+                }
+            }, 0);
+            return;
+        }
+
         if (e.key !== 'Enter' || e.shiftKey) return;
 
         const selection = window.getSelection();
@@ -230,7 +254,7 @@ export function BoardPage() {
         const range = selection.getRangeAt(0);
         let blockNode: Node | null = range.startContainer;
 
-        // Find the nearest block-level element
+        // Find the nearest block-level element (LI, DIV, P, H1-H3)
         while (blockNode && blockNode !== editorRef.current) {
             if (blockNode.nodeType === Node.ELEMENT_NODE) {
                 const tag = (blockNode as HTMLElement).tagName.toUpperCase();
@@ -241,6 +265,121 @@ export function BoardPage() {
             blockNode = blockNode.parentNode;
         }
 
+        // Check if we're inside an LI (HTML list)
+        let liNode: HTMLElement | null = null;
+        let node: Node | null = range.startContainer;
+        while (node && node !== editorRef.current) {
+            if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === 'LI') {
+                liNode = node as HTMLElement;
+                break;
+            }
+            node = node.parentNode;
+        }
+
+        if (liNode) {
+            const parentList = liNode.parentElement;
+            const isChecklist = parentList?.getAttribute('data-checklist') === 'true';
+            
+            // Get text content (excluding checkbox text)
+            let textContent = '';
+            for (const child of Array.from(liNode.childNodes)) {
+                if (child.nodeType === Node.ELEMENT_NODE && (child as HTMLElement).tagName === 'INPUT') continue;
+                textContent += child.textContent || '';
+            }
+
+            if (!textContent.trim()) {
+                // Empty list item: exit the list
+                e.preventDefault();
+
+                // Remove the empty LI
+                liNode.remove();
+
+                // If the list is now empty, remove it too
+                if (parentList && parentList.children.length === 0) {
+                    const newDiv = document.createElement('div');
+                    newDiv.innerHTML = '<br>';
+                    parentList.parentNode?.replaceChild(newDiv, parentList);
+
+                    const newRange = document.createRange();
+                    newRange.setStart(newDiv, 0);
+                    newRange.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                } else {
+                    // Insert a new line after the list
+                    const newDiv = document.createElement('div');
+                    newDiv.innerHTML = '<br>';
+                    parentList?.parentNode?.insertBefore(newDiv, parentList.nextSibling);
+
+                    const newRange = document.createRange();
+                    newRange.setStart(newDiv, 0);
+                    newRange.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                }
+
+                handleEditorInput();
+                return;
+            }
+
+            if (isChecklist) {
+                // Checklist: let browser create the new LI, then inject a checkbox
+                e.preventDefault();
+
+                // Split content at cursor and create new LI
+                const newLi = document.createElement('li');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.style.marginRight = '6px';
+                checkbox.style.cursor = 'pointer';
+                newLi.appendChild(checkbox);
+
+                // Move content after cursor to new LI
+                const afterRange = document.createRange();
+                afterRange.setStart(range.startContainer, range.startOffset);
+                afterRange.setEndAfter(liNode.lastChild!);
+                const fragment = afterRange.extractContents();
+                
+                // Remove any checkboxes from the extracted fragment
+                const extractedCheckboxes = fragment.querySelectorAll('input[type="checkbox"]');
+                extractedCheckboxes.forEach(cb => cb.remove());
+                
+                newLi.appendChild(fragment);
+
+                // If newLi has no text content, add a zero-width space for cursor placement
+                if (!newLi.textContent?.replace(/\u200B/g, '').trim()) {
+                    newLi.appendChild(document.createTextNode('\u200B'));
+                }
+
+                // Insert after current LI
+                liNode.parentNode?.insertBefore(newLi, liNode.nextSibling);
+
+                // Place cursor after checkbox in new LI
+                const newRange = document.createRange();
+                const textNode = newLi.childNodes[1] || newLi.lastChild;
+                if (textNode) {
+                    if (textNode.nodeType === Node.TEXT_NODE) {
+                        newRange.setStart(textNode, 0);
+                    } else {
+                        newRange.setStartAfter(textNode);
+                    }
+                    newRange.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(newRange);
+                }
+
+                handleEditorInput();
+                return;
+            }
+
+            // For regular ol/ul, let browser handle the default Enter behavior
+            // (it creates new <li> automatically)
+            setTimeout(() => handleEditorInput(), 0);
+            return;
+        }
+
+        // Text-based numbered list handling (e.g. "1. item")
+        // Use the full textContent of the block to detect numbers even inside <b>, <i>, etc.
         let targetNodeToClear: Node | null = null;
         let lineText = '';
         if (blockNode && blockNode !== editorRef.current) {
@@ -279,7 +418,32 @@ export function BoardPage() {
             document.execCommand('insertParagraph', false);
             document.execCommand('insertText', false, `${nextNum}. `);
             
+            // Renumber subsequent items after the insertion
+            setTimeout(() => {
+                if (editorRef.current) renumberTextLists(editorRef.current);
+            }, 0);
+
             handleEditorInput();
+        }
+    };
+
+    // Handle checkbox toggling in checklists
+    const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' && target.getAttribute('type') === 'checkbox') {
+            const checkbox = target as HTMLInputElement;
+            const li = checkbox.closest('li');
+            if (li) {
+                // Toggle checked class after the checkbox state updates
+                setTimeout(() => {
+                    if (checkbox.checked) {
+                        li.classList.add('checked');
+                    } else {
+                        li.classList.remove('checked');
+                    }
+                    handleEditorInput();
+                }, 0);
+            }
         }
     };
 
@@ -287,17 +451,35 @@ export function BoardPage() {
         if (!selectedNoteId) return;
         deleteNote.mutate(selectedNoteId);
         setSelectedNoteId(null);
+        if (stickyNoteId === selectedNoteId) setStickyNoteId(null);
         setShowDeleteModal(false);
+    };
+
+    // Sticky note: extract plain text from HTML content
+    const getStickyText = (content: string) => {
+        if (!content) return '';
+        const tmp = document.createElement('div');
+        tmp.innerHTML = content;
+        return tmp.innerText || tmp.textContent || '';
+    };
+
+    const handleStickyContentChange = (noteId: string, plainText: string) => {
+        // Convert plain text back to HTML (preserve line breaks as divs)
+        const htmlContent = plainText
+            .split('\n')
+            .map((line, i) => i === 0 ? line : `<div>${line || '<br>'}</div>`)
+            .join('');
+        updateNote.mutate({ id: noteId, updates: { content: htmlContent } });
     };
 
     const getPreview = (content: string) => {
         if (!content.trim()) return 'New Note';
-        // Strip HTML tags, decode entities, get first meaningful line
         const tmp = document.createElement('div');
         tmp.innerHTML = content;
-        const text = tmp.textContent || tmp.innerText || '';
+        const text = tmp.innerText || tmp.textContent || '';
         const firstLine = text.split('\n').find((l) => l.trim().length > 0)?.trim();
-        return firstLine || 'New Note';
+        if (!firstLine) return 'New Note';
+        return firstLine.length > 30 ? firstLine.slice(0, 30) + '…' : firstLine;
     };
 
     const formatDate = (dateStr: string) => {
@@ -390,6 +572,16 @@ export function BoardPage() {
                                         onSelect={(color) => updateNote.mutate({ id: selectedNote.id, updates: { color } })}
                                     />
                                     <button
+                                        className="editor-btn-icon sticky-btn"
+                                        title="스티커 메모로 열기"
+                                        onClick={() => setStickyNoteId(stickyNoteId === selectedNote.id ? null : selectedNote.id)}
+                                    >
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                            <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z" />
+                                            <polyline points="14 2 14 8 20 8" />
+                                        </svg>
+                                    </button>
+                                    <button
                                         className="editor-btn-icon"
                                         title="Delete Note"
                                         onClick={() => setShowDeleteModal(true)}
@@ -409,6 +601,7 @@ export function BoardPage() {
                                 suppressContentEditableWarning
                                 onInput={handleEditorInput}
                                 onKeyDown={handleEditorKeyDown}
+                                onClick={handleEditorClick}
                                 data-placeholder="Start typing your note..."
                             />
                         </>
@@ -430,6 +623,15 @@ export function BoardPage() {
                 <DeleteModal
                     onConfirm={handleDelete}
                     onCancel={() => setShowDeleteModal(false)}
+                />
+            )}
+
+            {stickyNoteId && notes.find(n => n.id === stickyNoteId) && (
+                <StickyNote
+                    noteId={stickyNoteId}
+                    content={getStickyText(notes.find(n => n.id === stickyNoteId)!.content)}
+                    onContentChange={handleStickyContentChange}
+                    onClose={() => setStickyNoteId(null)}
                 />
             )}
         </div>

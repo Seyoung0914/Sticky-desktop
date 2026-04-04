@@ -494,12 +494,53 @@ body,
   margin: 4px 0;
 }
 
+.content-editable ol {
+  list-style: decimal;
+}
+
+.content-editable ul {
+  list-style: disc;
+}
+
+/* Checklist: hide bullets */
+.content-editable ul[data-checklist="true"] {
+  list-style: none;
+  padding-left: 4px;
+}
+
+.content-editable ul[data-checklist="true"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.content-editable ul[data-checklist="true"] li.checked {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* Restore text decorations reset by Tailwind v4 */
+.content-editable u {
+  text-decoration: underline;
+}
+
+.content-editable s,
+.content-editable strike,
+.content-editable del {
+  text-decoration: line-through;
+}
+
 .content-editable b, .content-editable strong {
   font-weight: 700;
 }
 
 .content-editable i, .content-editable em {
   font-style: italic;
+}
+
+.content-editable li {
+  margin: 2px 0;
 }
 
 /* ===== Text Format Toolbar ===== */
@@ -920,3 +961,102 @@ body,
   font-size: 10px;
   color: #8e8e93;
 }
+
+/* ===== Floating Sticky Note ===== */
+.sticky-note-float {
+  position: fixed;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  background: #FFF9C4;
+  border: 1.5px solid #e6d96e;
+}
+
+.sticky-note-header {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 6px;
+  background: linear-gradient(180deg, #f0c800 0%, #e6b800 100%);
+  cursor: grab;
+  user-select: none;
+  gap: 4px;
+}
+
+.sticky-note-header:active {
+  cursor: grabbing;
+}
+
+.sticky-note-header-spacer {
+  flex: 1;
+}
+
+.sticky-note-close {
+  background: transparent;
+  border: none;
+  color: #5a4e00;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.sticky-note-close:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #c00;
+}
+
+.sticky-note-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.sticky-note-textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  line-height: 1.6;
+  color: #1a1a1a;
+}
+
+.sticky-note-textarea::placeholder {
+  color: #9e9560;
+}
+
+.sticky-note-resize {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sticky-note-resize svg {
+  stroke: #b0a050;
+}
+
+/* Sticky button highlight when active */
+.sticky-btn.active,
+.editor-btn-icon.sticky-btn:hover {
+  background-color: rgba(255, 200, 0, 0.2);
+  color: #f0c800;
+}
+

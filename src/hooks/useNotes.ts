@@ -73,7 +73,6 @@ export function useCreateNote() {
 }
 
 export function useUpdateNote() {
-    const queryClient = useQueryClient();
     const updateNoteInStore = useNotesStore((s) => s.updateNote);
 
     return useMutation({
@@ -93,7 +92,6 @@ export function useUpdateNote() {
         },
         onSuccess: (note) => {
             updateNoteInStore(note.id, note);
-            queryClient.invalidateQueries({ queryKey: NOTES_KEY });
         },
     });
 }
