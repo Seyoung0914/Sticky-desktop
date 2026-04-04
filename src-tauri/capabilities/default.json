@@ -8,7 +8,9 @@
     "core:window:default",
     "core:window:allow-close",
     "core:window:allow-set-focus",
+    "core:window:allow-create",
     "core:webview:default",
+    "core:webview:allow-create-webview-window",
     "opener:default"
   ]
 }
