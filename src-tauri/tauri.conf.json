@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "desktop",
+        "title": "SyncStick",
         "width": 700,
         "height": 500
       }
@@ -23,13 +23,21 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["dmg", "nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.13"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "both"
+      }
+    }
   }
 }
