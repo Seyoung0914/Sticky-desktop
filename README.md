@@ -102,22 +102,3 @@ git push origin v0.1.0
 빌드 완료 후 GitHub Releases 페이지에서 Draft Release를 확인하고 Publish 하면 됩니다.
 
 사용자는 Releases 페이지에서 `.dmg` 또는 `.exe`를 다운받아 설치하면 됩니다.
-
-### GitHub Secrets 설정 (Mac 코드 서명)
-
-Mac 배포 시 "손상된 파일" 에러를 방지하려면 다음 Secrets를 등록해야 합니다:
-
-| Secret | 설명 |
-|--------|------|
-| `APPLE_CERTIFICATE` | `.p12` 인증서 파일의 Base64 인코딩 |
-| `APPLE_CERTIFICATE_PASSWORD` | 인증서 비밀번호 |
-| `KEYCHAIN_PASSWORD` | CI용 키체인 비밀번호 (아무 값이나 설정) |
-| `APPLE_SIGNING_IDENTITY` | 인증서 이름 (예: `Developer ID Application: Name (TEAMID)`) |
-| `APPLE_ID` | Apple ID 이메일 |
-| `APPLE_PASSWORD` | [앱 전용 비밀번호](https://appleid.apple.com/) |
-| `APPLE_TEAM_ID` | Apple Developer 팀 ID |
-
-인증서 Base64 변환:
-```bash
-base64 -i certificate.p12 | pbcopy
-```
