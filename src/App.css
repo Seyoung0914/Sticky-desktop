@@ -962,95 +962,118 @@ body,
   color: #8e8e93;
 }
 
-/* ===== Floating Sticky Note ===== */
-.sticky-note-float {
-  position: fixed;
-  z-index: 9000;
+/* ===== Sticky Note Window (Tauri) ===== */
+.sticky-page {
+  width: 100vw;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  border-radius: 4px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  background: #FFF9C4;
-  border: 1.5px solid #e6d96e;
+  border-radius: 8px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  position: relative;
 }
 
-.sticky-note-header {
-  height: 32px;
+/* 타이틀바 (드래그 영역) */
+.sticky-page-titlebar {
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding: 0 6px;
-  background: linear-gradient(180deg, #f0c800 0%, #e6b800 100%);
-  cursor: grab;
+  gap: 6px;
+  -webkit-app-region: drag;
   user-select: none;
-  gap: 4px;
+  flex-shrink: 0;
 }
 
-.sticky-note-header:active {
-  cursor: grabbing;
-}
-
-.sticky-note-header-spacer {
-  flex: 1;
-}
-
-.sticky-note-close {
+.sticky-page-titlebar button {
+  -webkit-app-region: no-drag;
   background: transparent;
   border: none;
-  color: #5a4e00;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background 0.15s;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+  transition: background 0.12s, color 0.12s;
 }
 
-.sticky-note-close:hover {
-  background: rgba(0, 0, 0, 0.12);
+.sticky-page-titlebar button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.sticky-page-titlebar .close-btn:hover {
+  background: rgba(220, 0, 0, 0.15);
   color: #c00;
 }
 
-.sticky-note-body {
+/* 에디터 */
+.sticky-page-editor {
   flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-.sticky-note-textarea {
-  flex: 1;
-  border: none;
   outline: none;
-  resize: none;
-  background: transparent;
-  padding: 12px 14px;
+  padding: 12px 16px;
   font-size: 14px;
-  font-family: 'Inter', -apple-system, sans-serif;
-  line-height: 1.6;
+  line-height: 1.7;
   color: #1a1a1a;
+  overflow-y: auto;
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
-.sticky-note-textarea::placeholder {
-  color: #9e9560;
+.sticky-page-editor:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
 }
 
-.sticky-note-resize {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 18px;
-  height: 18px;
-  cursor: nwse-resize;
+.sticky-page-editor:focus {
+  outline: none;
+}
+
+/* 포맷 툴바 */
+.sticky-page-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+  background: inherit;
+}
+
+.sticky-fmt-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+  transition: background 0.12s;
 }
 
-.sticky-note-resize svg {
-  stroke: #b0a050;
+.sticky-fmt-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* 로딩 */
+.sticky-page-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 14px;
 }
 
 /* Sticky button highlight when active */

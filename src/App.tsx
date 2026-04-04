@@ -5,6 +5,7 @@ import { useAuthStore } from './stores/useAuthStore';
 import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { BoardPage } from './pages/BoardPage';
+import { StickyNotePage } from './pages/StickyNotePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +44,13 @@ function AuthRouter() {
 }
 
 function App() {
+  // 스티커 메모 창인지 확인
+  const isStickyWindow = new URLSearchParams(window.location.search).has('noteId');
+
+  if (isStickyWindow) {
+    return <StickyNotePage />;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthRouter />

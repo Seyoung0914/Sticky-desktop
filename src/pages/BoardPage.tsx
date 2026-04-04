@@ -8,7 +8,7 @@ import { useUpdateNote, useDeleteNote } from '../hooks/useNotes';
 import { DeleteModal } from '../components/DeleteModal';
 import { ColorPicker } from '../components/ColorPicker';
 import { TextFormatToolbar } from '../components/TextFormatToolbar';
-import { StickyNote } from '../components/StickyNote';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 function getFirstTextNode(node: Node): Text | null {
     if (node.nodeType === Node.TEXT_NODE) return node as Text;
@@ -110,7 +110,6 @@ export function BoardPage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [sortMode, setSortMode] = useState<'newest' | 'oldest'>('newest');
     const [showSortMenu, setShowSortMenu] = useState(false);
-    const [stickyNoteId, setStickyNoteId] = useState<string | null>(null);
 
     const sortMenuRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
@@ -451,25 +450,30 @@ export function BoardPage() {
         if (!selectedNoteId) return;
         deleteNote.mutate(selectedNoteId);
         setSelectedNoteId(null);
-        if (stickyNoteId === selectedNoteId) setStickyNoteId(null);
         setShowDeleteModal(false);
     };
 
-    // Sticky note: extract plain text from HTML content
-    const getStickyText = (content: string) => {
-        if (!content) return '';
-        const tmp = document.createElement('div');
-        tmp.innerHTML = content;
-        return tmp.innerText || tmp.textContent || '';
-    };
-
-    const handleStickyContentChange = (noteId: string, plainText: string) => {
-        // Convert plain text back to HTML (preserve line breaks as divs)
-        const htmlContent = plainText
-            .split('\n')
-            .map((line, i) => i === 0 ? line : `<div>${line || '<br>'}</div>`)
-            .join('');
-        updateNote.mutate({ id: noteId, updates: { content: htmlContent } });
+    // 스티커 메모를 별도 Tauri 창으로 열기
+    const openStickyWindow = async (noteId: string) => {
+        const label = `sticky-${noteId.slice(0, 8)}`;
+        // 이미 열린 창이 있는지 확인
+        const existing = await WebviewWindow.getByLabel(label);
+        if (existing) {
+            await existing.setFocus();
+            return;
+        }
+        new WebviewWindow(label, {
+            url: `index.html?noteId=${noteId}`,
+            title: 'SyncStick Memo',
+            width: 320,
+            height: 420,
+            x: 20,
+            y: 20,
+            decorations: false,
+            alwaysOnTop: true,
+            resizable: true,
+            transparent: false,
+        });
     };
 
     const getPreview = (content: string) => {
@@ -574,7 +578,7 @@ export function BoardPage() {
                                     <button
                                         className="editor-btn-icon sticky-btn"
                                         title="스티커 메모로 열기"
-                                        onClick={() => setStickyNoteId(stickyNoteId === selectedNote.id ? null : selectedNote.id)}
+                                        onClick={() => openStickyWindow(selectedNote.id)}
                                     >
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                             <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z" />
@@ -623,15 +627,6 @@ export function BoardPage() {
                 <DeleteModal
                     onConfirm={handleDelete}
                     onCancel={() => setShowDeleteModal(false)}
-                />
-            )}
-
-            {stickyNoteId && notes.find(n => n.id === stickyNoteId) && (
-                <StickyNote
-                    noteId={stickyNoteId}
-                    content={getStickyText(notes.find(n => n.id === stickyNoteId)!.content)}
-                    onContentChange={handleStickyContentChange}
-                    onClose={() => setStickyNoteId(null)}
                 />
             )}
         </div>
