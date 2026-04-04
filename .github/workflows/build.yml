@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  APP_NAME: SyncStick
+  APP_NAME: SYMOA
 
 jobs:
   build:

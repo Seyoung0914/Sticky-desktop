@@ -464,7 +464,7 @@ export function BoardPage() {
             }
             const webview = new WebviewWindow(label, {
                 url: `/?noteId=${noteId}`,
-                title: 'SyncStick Memo',
+                title: 'SYMOA Memo',
                 width: 320,
                 height: 420,
                 x: 20,

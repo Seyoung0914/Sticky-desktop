@@ -28,7 +28,7 @@ function AuthRouter() {
     return (
       <div className="loading-screen">
         <div className="loading-spinner" />
-        <p>Loading SyncStick...</p>
+        <p>Loading SYMOA...</p>
       </div>
     );
   }

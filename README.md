@@ -1,4 +1,4 @@
-# SyncStick
+# SYMOA
 
 실시간 동기화를 지원하는 노트 데스크탑 앱입니다.
 
@@ -12,13 +12,13 @@
 ### macOS
 
 1. `.dmg` 파일을 다운로드합니다
-2. 더블클릭하여 열고, SyncStick을 Applications 폴더로 드래그합니다
+2. 더블클릭하여 열고, SYMOA을 Applications 폴더로 드래그합니다
 3. 완료! 🎉
 
 > ⚠️ **코드 서명이 없는 빌드**의 경우, 처음 실행 시 "손상된 파일" 에러가 날 수 있습니다:
 > ```bash
 > # 터미널에서 한 번만 실행하면 됩니다
-> sudo xattr -rd com.apple.quarantine /Applications/SyncStick.app
+> sudo xattr -rd com.apple.quarantine /Applications/SYMOA.app
 > ```
 
 ### Windows
@@ -79,8 +79,8 @@ npm run tauri build
 ```
 
 빌드 결과물 위치:
-- **macOS**: `src-tauri/target/release/bundle/dmg/SyncStick_x.x.x_*.dmg`
-- **Windows**: `src-tauri/target/release/bundle/nsis/SyncStick_x.x.x_x64-setup.exe`
+- **macOS**: `src-tauri/target/release/bundle/dmg/SYMOA_x.x.x_*.dmg`
+- **Windows**: `src-tauri/target/release/bundle/nsis/SYMOA_x.x.x_x64-setup.exe`
 
 ### 권장 IDE
 
