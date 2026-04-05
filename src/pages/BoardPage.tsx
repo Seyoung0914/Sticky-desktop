@@ -111,16 +111,6 @@ export function BoardPage() {
     const [sortMode, setSortMode] = useState<'newest' | 'oldest'>('newest');
     const [showSortMenu, setShowSortMenu] = useState(false);
 
-    // Mobile View State
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-    const [mobileView, setMobileView] = useState<'list' | 'editor'>('list');
-
-    useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth <= 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
     const sortMenuRef = useRef<HTMLDivElement>(null);
     const editorRef = useRef<HTMLDivElement>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -207,8 +197,7 @@ export function BoardPage() {
     }, [selectedNote?.content]);
 
     const handleCreateNote = async () => {
-        setMobileView('editor');
-        const newNote = await createNote.mutateAsync({} as any);
+        const newNote = await createNote.mutateAsync({});
         setSelectedNoteId(newNote.id);
     };
 
@@ -527,7 +516,7 @@ export function BoardPage() {
     return (
         <div className="layout-container">
             {/* Main Content */}
-            <div className={`layout-body ${isMobile ? `mobile-view-${mobileView}` : ''}`}>
+            <div className="layout-body">
                 {/* Left Sidebar */}
                 <div className="sidebar">
                     <div className="sidebar-header">
@@ -575,7 +564,7 @@ export function BoardPage() {
                                 <div
                                     key={note.id}
                                     className={`sidebar-item ${isSelected ? 'selected' : ''}`}
-                                    onClick={() => { setSelectedNoteId(note.id); setMobileView('editor'); }}
+                                    onClick={() => setSelectedNoteId(note.id)}
                                 >
                                     <div className="sidebar-item-indicator" style={{ backgroundColor: colors.header }} />
                                     <div className="sidebar-item-content">
@@ -598,13 +587,6 @@ export function BoardPage() {
                     {selectedNote ? (
                         <>
                             <div className="editor-toolbar">
-                                {isMobile && (
-                                    <button className="editor-btn-icon" onClick={() => setMobileView('list')} title="뒤로가기" style={{ marginRight: '8px' }}>
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="15 18 9 12 15 6"></polyline>
-                                        </svg>
-                                    </button>
-                                )}
                                 <Toolbar isSyncing={isFetching} />
                                 <div className="editor-actions">
                                     <ColorPicker

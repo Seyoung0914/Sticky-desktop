@@ -1083,21 +1083,3 @@ body,
   color: #f0c800;
 }
 
-/* ===== Mobile Responsive Layout ===== */
-@media (max-width: 768px) {
-  .layout-body.mobile-view-list .editor-pane {
-    display: none;
-  }
-  .layout-body.mobile-view-list .sidebar {
-    width: 100%;
-    flex: 1;
-    border-right: none;
-  }
-  .layout-body.mobile-view-editor .sidebar {
-    display: none;
-  }
-  .layout-body.mobile-view-editor .editor-pane {
-    width: 100%;
-    flex: 1;
-  }
-}
